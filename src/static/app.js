@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const categoryFilters = document.querySelectorAll(".category-filter");
   const dayFilters = document.querySelectorAll(".day-filter");
   const timeFilters = document.querySelectorAll(".time-filter");
+  const difficultyFilters = document.querySelectorAll(".difficulty-filter");
 
   // Authentication elements
   const loginButton = document.getElementById("login-button");
@@ -40,6 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let searchQuery = "";
   let currentDay = "";
   let currentTimeRange = "";
+  let currentDifficulty = "";
 
   // Authentication state
   let currentUser = null;
@@ -437,6 +439,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
+      // Apply difficulty filter
+      if (currentDifficulty && details.difficulty !== currentDifficulty) {
+        return;
+      }
+
       // Apply search filter
       const searchableContent = [
         name.toLowerCase(),
@@ -499,11 +506,27 @@ document.addEventListener("DOMContentLoaded", () => {
     // Format the schedule using the new helper function
     const formattedSchedule = formatSchedule(details);
 
-    // Create activity tag
+    // Difficulty level colors
+    const difficultyColors = {
+      "Beginner": { bg: "#d4edda", text: "#155724" },
+      "Intermediate": { bg: "#fff3cd", text: "#856404" },
+      "Advanced": { bg: "#f8d7da", text: "#721c24" }
+    };
+
+    // Get difficulty level
+    const difficulty = details.difficulty || "Beginner";
+    const difficultyColor = difficultyColors[difficulty] || difficultyColors["Beginner"];
+
+    // Create activity tag and difficulty badge
     const tagHtml = `
-      <span class="activity-tag" style="background-color: ${typeInfo.color}; color: ${typeInfo.textColor}">
-        ${typeInfo.label}
-      </span>
+      <div class="activity-badges">
+        <span class="activity-tag" style="background-color: ${typeInfo.color}; color: ${typeInfo.textColor}">
+          ${typeInfo.label}
+        </span>
+        <span class="difficulty-badge" style="background-color: ${difficultyColor.bg}; color: ${difficultyColor.text}">
+          ${difficulty}
+        </span>
+      </div>
     `;
 
     // Create capacity indicator
@@ -638,6 +661,19 @@ document.addEventListener("DOMContentLoaded", () => {
       // Update current time filter and fetch activities
       currentTimeRange = button.dataset.time;
       fetchActivities();
+    });
+  });
+
+  // Add event listeners for difficulty filter buttons
+  difficultyFilters.forEach((button) => {
+    button.addEventListener("click", () => {
+      // Update active class
+      difficultyFilters.forEach((btn) => btn.classList.remove("active"));
+      button.classList.add("active");
+
+      // Update current difficulty filter and display filtered activities
+      currentDifficulty = button.dataset.difficulty;
+      displayFilteredActivities();
     });
   });
 
