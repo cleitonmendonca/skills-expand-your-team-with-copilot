@@ -608,6 +608,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `
         }
       </div>
+      ${createSocialSharingButtons(name, details.description)}
     `;
 
     // Add click handlers for delete buttons
@@ -625,6 +626,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    // Add click handlers for social sharing buttons
+    const shareButtons = activityCard.querySelectorAll(".share-button");
+    shareButtons.forEach((button) => {
+      button.addEventListener("click", handleShareClick);
+    });
 
     activitiesList.appendChild(activityCard);
   }
@@ -894,6 +901,158 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // Weather functionality
+  async function fetchWeather() {
+    const weatherInfo = document.getElementById("weather-info");
+    
+    try {
+      // Using Open-Meteo API (free, no API key required)
+      // Default to school location (using approximate coordinates for a typical US high school)
+      const latitude = 40.7128; // Example: New York area
+      const longitude = -74.0060;
+      
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`
+      );
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch weather");
+      }
+      
+      const data = await response.json();
+      const current = data.current;
+      
+      // Weather code to icon mapping (simplified)
+      const getWeatherIcon = (code) => {
+        if (code === 0) return "☀️";
+        if (code <= 3) return "⛅";
+        if (code <= 67) return "🌧️";
+        if (code <= 77) return "🌨️";
+        if (code <= 82) return "🌧️";
+        if (code <= 86) return "🌨️";
+        return "🌤️";
+      };
+      
+      const getWeatherDescription = (code) => {
+        if (code === 0) return "Clear sky";
+        if (code <= 3) return "Partly cloudy";
+        if (code <= 67) return "Rainy";
+        if (code <= 77) return "Snowy";
+        if (code <= 82) return "Rain showers";
+        if (code <= 86) return "Snow showers";
+        return "Cloudy";
+      };
+      
+      const icon = getWeatherIcon(current.weather_code);
+      const description = getWeatherDescription(current.weather_code);
+      
+      weatherInfo.className = "";
+      weatherInfo.innerHTML = `
+        <div class="weather-main">
+          <div class="weather-icon">${icon}</div>
+          <div class="weather-temp">${Math.round(current.temperature_2m)}°F</div>
+          <div class="weather-details">
+            <div class="weather-description">${description}</div>
+            <div class="weather-location">Mergington High School</div>
+          </div>
+        </div>
+        <div class="weather-extra">
+          <div class="weather-extra-item">
+            <span class="weather-extra-label">Feels Like</span>
+            <span class="weather-extra-value">${Math.round(current.apparent_temperature)}°F</span>
+          </div>
+          <div class="weather-extra-item">
+            <span class="weather-extra-label">Humidity</span>
+            <span class="weather-extra-value">${current.relative_humidity_2m}%</span>
+          </div>
+          <div class="weather-extra-item">
+            <span class="weather-extra-label">Wind</span>
+            <span class="weather-extra-value">${Math.round(current.wind_speed_10m)} mph</span>
+          </div>
+        </div>
+      `;
+    } catch (error) {
+      console.error("Error fetching weather:", error);
+      weatherInfo.className = "error";
+      weatherInfo.innerHTML = `
+        <p>Unable to load weather information</p>
+      `;
+    }
+  }
+
+  // Social sharing functionality
+  function createSocialSharingButtons(activityName, description) {
+    const pageUrl = encodeURIComponent(window.location.href);
+    const shareText = encodeURIComponent(
+      `Check out ${activityName} at Mergington High School! ${description}`
+    );
+    const shareTitle = encodeURIComponent(activityName);
+    
+    return `
+      <div class="social-sharing">
+        <button class="share-button facebook" data-activity="${activityName}" data-platform="facebook">
+          <span class="share-icon">📘</span>
+          <span>Share</span>
+        </button>
+        <button class="share-button twitter" data-activity="${activityName}" data-platform="twitter">
+          <span class="share-icon">🐦</span>
+          <span>Tweet</span>
+        </button>
+        <button class="share-button email" data-activity="${activityName}" data-platform="email">
+          <span class="share-icon">✉️</span>
+          <span>Email</span>
+        </button>
+        <button class="share-button copy" data-activity="${activityName}" data-platform="copy">
+          <span class="share-icon">📋</span>
+          <span>Copy Link</span>
+        </button>
+      </div>
+    `;
+  }
+
+  function handleShareClick(event) {
+    const button = event.currentTarget;
+    const platform = button.dataset.platform;
+    const activityName = button.dataset.activity;
+    
+    const pageUrl = window.location.href;
+    const shareText = `Check out ${activityName} at Mergington High School!`;
+    const shareUrl = encodeURIComponent(pageUrl);
+    const shareTextEncoded = encodeURIComponent(shareText);
+    
+    switch (platform) {
+      case "facebook":
+        window.open(
+          `https://www.facebook.com/sharer/sharer.php?u=${shareUrl}`,
+          "_blank",
+          "width=600,height=400"
+        );
+        break;
+      case "twitter":
+        window.open(
+          `https://twitter.com/intent/tweet?text=${shareTextEncoded}&url=${shareUrl}`,
+          "_blank",
+          "width=600,height=400"
+        );
+        break;
+      case "email":
+        window.location.href = `mailto:?subject=${encodeURIComponent(
+          activityName
+        )}&body=${shareTextEncoded}%0A%0A${shareUrl}`;
+        break;
+      case "copy":
+        navigator.clipboard
+          .writeText(pageUrl)
+          .then(() => {
+            showMessage("Link copied to clipboard!", "success");
+          })
+          .catch(() => {
+            showMessage("Failed to copy link", "error");
+          });
+        break;
+    }
+  }
+
   // Expose filter functions to window for future UI control
   window.activityFilters = {
     setDayFilter,
@@ -905,4 +1064,5 @@ document.addEventListener("DOMContentLoaded", () => {
   checkAuthentication();
   initializeFilters();
   fetchActivities();
+  fetchWeather(); // Fetch weather on page load
 });
